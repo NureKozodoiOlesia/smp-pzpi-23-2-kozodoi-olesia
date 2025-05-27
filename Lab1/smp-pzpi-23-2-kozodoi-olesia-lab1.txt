@@ -1,0 +1,420 @@
+МІНІСТЕРСТВО ОСВІТИ І НАУКИ УКРАЇНИ 
+
+
+Харківський національний університет радіоелектроніки
+Факультет комп’ютерних наук
+Кафедра програмної інженерії
+
+
+
+
+Звіт
+з лабораторної роботи № 1
+з дисципліни: «Скриптові мови програмування»
+з теми: «Розробка Bash-скрипту для конвертації розкладу CIST NURE у формат Google Календар»
+
+
+
+
+Виконала:
+ст. гр. ПЗПІ-23-2
+Козодой О. Д.
+
+Перевірив:
+ст. викл. каф. ПІ
+Сокорчук І. П.
+
+
+
+
+Харків – 2025
+
+1 ІСТОРІЯ ЗМІН
+
+№ 	Дата	       Версія звіту   	Опис змін та виправлень
+1 	10.05.2025	 0.1	            Створено розділи «Історія змін», «Завдання», «Опис виконаної роботи»
+2 	12.03.2025	 0.2	            Створено розділ «Висновки» та оформлено додатки
+
+
+2 ЗАВДАННЯ
+1.1 Мета роботи
+
+– Ознайомитись з основними командами Bash для роботи з файлами та текстовими даними.
+– Навчитись використовувати команди «select», «ls», «awk», «sort», «uniq»,
+«tee», «cat», «sed», «iconv», тощо.
+– Розробити Bash-скрипт для перетворення CSV файла розкладу занять у формат для імпорту в Google Календар.
+1.2 Текст завдання
+
+     Необхідно розробити Bash-скрипт, який обробляє експортований із сайту https://cist.nure.ua/ розклад занять для всіх груп потоку в форматі CSV та перетворює його у формат CSV для завантаження в Google Календар.
+
+
+3 ОПИС ВИКОНАНОЇ РОБОТИ
+
+     Скрипт реалізує повний цикл обробки даних: від вибору потрібного файлу й групи до кінцевого формування відформатованого CSV-файлу з потрібними полями. Повну версію скрипта можна переглянути в додатку Б.
+     На початку скрипта оголошуються основні змінні, зокрема версія скрипта, кодування вхідного і вихідного файлів, шлях до тимчасового файлу зі списком груп, а також прапорець для режиму без виводу результату у консоль. Ці змінні знадобляться нам в подальшій реалізації:
+  1  SCRIPT_VERSION="1.0"
+  2  ENCODING_SRC="cp1251"
+  3  ENCODING_DST="UTF-8"
+  4  TEMP_GROUPS="groups.csv"
+  5  quiet=0
+     Далі визначені допоміжні функції. Функція «show_help» відображає довідку про використання скрипта, пояснюючи синтаксис запуску, ключі та аргументи. Викликається, якщо задано ключ «--help». А функція «show_version» виводить інформацію про версію скрипта.
+  1  show_help() {
+  2    echo "Використання: ${0##*/} [--help | --version] | [[-q|--quiet] [академ_група] файл_розкладу.csv]"
+  3    echo "Перетворює розклад із CIST у формат Google Calendar."
+  4    exit 0
+  5  }
+  6  
+  7  show_version() {
+  8    echo "${0##*/} версія $SCRIPT_VERSION"
+  9    exit 0
+ 10  }
+     Функція «select_timetable» пропонує користувачеві вибрати файл розкладу з тих, що містяться у поточній директорії. Імена файлів мають бути у форматі TimeTable_DD_MM_YYYY.csv. Для цього використовується конструкція select, що створює просте меню:
+  1 select_timetable() {
+  2     echo "Оберіть файл розкладу:"
+  3     mapfile -t csv_files < <(ls TimeTable_??_??_20??.csv 2>/dev/null | sort -t'_' -k4,4n -k3,3n -k2,2)
+  4     if [[ ${#csv_files[@]} -eq 0 ]]; then
+  5         echo "CSV файли не знайдено." >&2
+  6         exit 1
+  7     fi
+  8     select var in "${csv_files[@]}"; do
+  9         if [[ -n "$var" ]]; then
+ 10             timetable="$var"
+ 11             break
+ 12         fi
+ 13     done
+ 14 }
+     Наступним кроком йде функція extract_groups, яка відповідає за витягування назв академічних груп із обраного CSV-файлу. Для цього вона пропускає перший рядок із заголовками, витягує значення першого стовпця (де зберігається назва групи), перевіряє наявність дефіса як частину формату і сортує список груп, видаляючи повтори. 
+  1 extract_groups() {
+  2     mapfile -t available_groups < <(iconv -f "$ENCODING_SRC" -t "$ENCODING_DST" "$timetable" | grep -o 'ПЗПІ-[0-9]\+-[0-9]\+' | sort -u)
+  3     if [[ ${#available_groups[@]} -eq 0 ]]; then
+  4         echo "У файлі не знайдено жодної групи." >&2
+  5         return 1
+  6     fi
+  7     printf '%s\n' "${available_groups[@]}" > "$TEMP_GROUPS"
+  8     return 0
+  9 }
+     Перевірка, чи обрана група справді є у файлі, виконується у функції «check_existence_of_group», яка повторно викликає функцію «extract_groups», а потім перевіряє наявність значення у списку за допомогою «grep».
+  1 check_existence_of_group() {
+  2     extract_groups || return 0
+  3     if grep -q "^$group$" "$TEMP_GROUPS"; then
+  4         return 0
+  5     else
+  6         return 1
+  7     fi
+  8 }
+     Функція «select_group» дає змогу вибрати групу з автоматично згенерованого списку. Якщо у файлі знайдена лише одна група, вона обирається автоматично. Інакше користувач обирає її зі списку.
+  1 select_group() {
+  2     extract_groups || return 1
+  3     mapfile -t groups_array < "$TEMP_GROUPS"
+  4     if [[ ${#groups_array[@]} -eq 1 ]]; then
+  5         group="${groups_array[0]}"
+  6         echo "Автоматично обрана група: $group"
+  7     else
+  8         echo "Оберіть академічну групу:"
+  9         select var in "${groups_array[@]}"; do
+ 10             if [[ -n "$var" ]]; then
+ 11                 group="$var"
+ 12                 break
+ 13             fi
+ 14         done
+ 15     fi
+ 16 }
+     Перед обробкою CSV-файлу потрібно перекодувати його у UTF-8, що виконується у функції «format_file». Крім перекодування, усуваються символи переносу рядків у стилі Windows (\r), замінюючи їх на звичні UNIX-переноси (\n):
+  1 format_file() {
+  2   iconv -f "$ENCODING_SRC" -t "$ENCODING_DST" "$timetable" > "$RESULT"
+  3   sed -i 's/\r/\n/g' "$RESULT"
+  4 }
+     Основну обробку даних виконує функція «convert_csv_for_import_in_Google_Calendar», яка за допомогою awk проходиться по всіх рядках CSV-файлу. Вона фільтрує записи за вказаною навчальною групою, вилучає ключові поля (назву дисципліни, тип заняття, дату, час, опис), сортує їх за часом початку, форматує дати та час згідно з вимогами Google Calendar і формує остаточний CSV-файл із відповідною структурою.
+     Додатково функція нумерує заняття одного типу та предмета (наприклад, лабораторні) для кращої ідентифікації, підтримує сортування по даті та часу, і забезпечує обробку складних випадків з CSV-рядками з лапками. Тимчасові файли, створені для проміжної обробки, автоматично видаляються наприкінці виконання функції. Фрагмент коду для реалізації даних функцій наведено у додатку Б (78-205 рядки).
+     Далі реалізовано обробку командного рядка за допомогою інструкції case. Він перевіряє, чи переданий скрипту один із спеціальних параметрів: --help — викликає функцію show_help; --version — викликає функцію show_version; -q або --quiet — вмикає "тихий" режим
+  1 case "$1" in
+  2     --help) show_help ;;
+  3     --version) show_version ;;
+  4     -q|--quiet)
+  5         quiet=1
+  6         shift
+  7         ;;
+  8 esac
+     Наступна частина скрипта перевіряє, чи передано аргументи — назву групи та файл розкладу. Якщо їх немає, користувачу пропонують обрати файл вручну, перевіряють його на існування, форматують файл і дозволяють обрати групу. Якщо аргументи передані, перевіряють, чи файл існує, та чи є в ньому вказана група — якщо ні, користувачу також пропонують обрати іншу. Після цього визначається дата з назви файлу для формування імені результату, виконується форматування файлу й основна функція, яка конвертує розклад у формат, сумісний із Google Calendar. Наприкінці скрипт очищає тимчасові дані. Описаний фрагмент коду наведено в додатку Б, рядки 216-253.
+
+
+4 ВИСНОВКИ
+
+     У ході виконання лабораторної роботи було розроблено Bash-скрипт для автоматичного перетворення розкладу занять, збереженого у форматі CSV із сайту CIST, у формат, придатний для імпорту в Google Calendar. 
+     Скрипт реалізує повний цикл обробки даних: від вибору потрібного файлу й групи до кінцевого формування відформатованого CSV-файлу з потрібними полями. У скрипті використовуються базові засоби UNIX-подібних систем, зокрема інструменти «awk», «sed», «iconv», «grep», «cut» та інші.
+
+
+ДОДАТОК А
+Відеозапис
+
+Відеозапис презентації результатів лабораторної роботи: https://youtu.be/90tgnxaUDpI 
+
+Хронологічний опис відеозапису:
+
+00:00 – Вступ
+00:15 – Огляд змінних
+00:33 – Пояснення головних функцій
+05:40 – Опис основної логіки виконання програми
+06:16 – Демонстрація успішної роботи програми
+
+
+
+ДОДАТОК Б
+Програмний код
+
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab1/smp-pzpi-23-2-kozodoi-olesia-lab1/smp-pzpi-23-2-kozodoi-olesia-lab1-code 
+
+  1 #!/bin/bash
+  2 SCRIPT_VERSION="1.0"
+  3 ENCODING_SRC="cp1251"
+  4 ENCODING_DST="UTF-8"
+  5 TEMP_GROUPS="groups.csv"
+  6 quiet=0
+  7
+  8 show_help() {
+  9     echo "Використання: ${0##*/} [--help | --version] | [[-q|--quiet] [академ_група] файл_розкладу.csv]"
+ 10     echo "Перетворює розклад із CIST у формат Google Calendar."        
+ 11     exit 0
+ 12 }
+ 13
+ 14 show_version() {
+ 15     echo "${0##*/} версія $SCRIPT_VERSION"
+ 16     exit 0
+ 17 }
+ 18
+ 19 select_timetable() {
+ 20     echo "Оберіть файл розкладу:"
+ 21     mapfile -t csv_files < <(ls TimeTable_??_??_20??.csv 2>/dev/null | sort -t'_' -k4,4n -k3,3n -k2,2)
+ 22     if [[ ${#csv_files[@]} -eq 0 ]]; then
+ 23         echo "CSV файли не знайдено." >&2
+ 24         exit 1
+ 25     fi
+ 26     select var in "${csv_files[@]}"; do
+ 27         if [[ -n "$var" ]]; then
+ 28             timetable="$var"
+ 29             break
+ 30         fi
+ 31     done
+ 32 }
+ 33
+ 34 extract_groups() {
+ 35     mapfile -t available_groups < <(iconv -f "$ENCODING_SRC" -t "$ENCODING_DST" "$timetable" | grep -o 'ПЗПІ-[0-9]\+-[0-9]\+' | sort -u)
+ 36     if [[ ${#available_groups[@]} -eq 0 ]]; then
+ 37         echo "У файлі не знайдено жодної групи." >&2
+ 38         return 1
+ 39     fi
+ 40     printf '%s\n' "${available_groups[@]}" > "$TEMP_GROUPS"
+ 41     return 0
+ 42 }
+ 43
+ 44 check_existence_of_group() {
+ 45     extract_groups || return 0
+ 46     if grep -q "^$group$" "$TEMP_GROUPS"; then
+ 47         return 0
+ 48     else
+ 49         return 1
+ 50     fi
+ 51 }
+ 52 
+ 53 select_group() {
+ 54     extract_groups || return 1
+ 55     mapfile -t groups_array < "$TEMP_GROUPS"
+ 56     if [[ ${#groups_array[@]} -eq 1 ]]; then
+ 57         group="${groups_array[0]}"
+ 58         echo "Автоматично обрана група: $group"
+ 59     else
+ 60         echo "Оберіть академічну групу:"
+ 61         select var in "${groups_array[@]}"; do
+ 62             if [[ -n "$var" ]]; then
+ 63                 group="$var"
+ 64                 break
+ 65             fi
+ 66         done
+ 67     fi
+ 68 }
+ 69
+ 70 format_file() {
+ 71     if ! iconv -f "$ENCODING_SRC" -t "$ENCODING_DST" "$timetable" > "$RESULT"; then
+ 72         echo "Помилка під час обробки файлу." >&2
+ 73         exit 1
+ 74     fi
+ 75     sed -i 's/\r/\n/g' "$RESULT"
+ 76 }
+ 77
+ 78 convert_csv_for_import_in_Google_Calendar() {
+ 79     local temp_sorted=$(mktemp)
+ 80     local temp_data=$(mktemp)
+ 81
+ 82     awk -v GROUP="$group" '
+ 83     BEGIN {
+ 84         FS=","; OFS="\t"
+ 85     }
+ 86     NR == 1 { next }
+ 87
+ 88     function format_sort_key(date, time) {
+ 89         split(date, dmy, ".")
+ 90         split(time, hm, ":")
+ 91         return sprintf("%04d%02d%02d%02d%02d", dmy[3], dmy[2], dmy[1], hm[1], hm[2])
+ 92     }
+ 93
+ 94     function trim_quotes(s) {
+ 95         gsub(/^"|"$/, "", s)
+ 96         return s
+ 97     }
+ 98
+ 99     {
+100         line = $0
+101         match(line, /"[0-3][0-9]\.[0-1][0-9]\.[0-9]{4}"/)
+102         if (RSTART == 0) next
+103
+104         field1 = substr(line, 1, RSTART - 2)
+105         rest = substr(line, RSTART)
+106
+107         n = 0; in_quotes = 0; field = ""
+108         for (i = 1; i <= length(rest); i++) {
+109             c = substr(rest, i, 1)
+110             if (c == "\"") in_quotes = !in_quotes
+111             else if (c == "," && !in_quotes) {
+112                 fields[++n] = field
+113                 field = ""
+114             } else {
+115                 field = field c
+116             }
+117         }
+118         fields[++n] = field
+119
+120         for (i = 1; i <= n; i++) fields[i] = trim_quotes(fields[i])    
+121         if (n < 12) next
+122
+123         # Знаходимо групу
+124         match(field1, /(ПЗПІ-[0-9]+-[0-9]+)/, m)
+125         found_group = m[1]
+126
+127         if (found_group != GROUP) next
+128
+129         field1 = substr(field1, RSTART + RLENGTH)
+130         gsub(/^[[:space:]]+/, "", field1)
+131         subject = field1
+132         gsub(/^"|"$/, "", subject)
+133         gsub(/^- /, "", subject)
+134
+135         desc = fields[11]
+136         type = "Інше"
+137
+138         if (desc ~ /Лб/) type = "Лб"
+139         else if (desc ~ /Лк/) type = "Лк"
+140         else if (desc ~ /Пз/) type = "Пз"
+141         else if (desc ~ /Екз/i) type = "Екз"
+142
+143         sort_key = format_sort_key(fields[1], fields[2])
+144         print subject, type, fields[1], fields[2], fields[3], fields[4], desc, sort_key
+145     }' "$RESULT" > "$temp_data"
+146
+147     sort -t $'\t' -k8,8 "$temp_data" > "$temp_sorted"
+148
+149     echo "Subject,Start Date,Start Time,End Date,End Time,Description" > "$RESULT"
+150
+151     awk -F'\t' -v quiet="$quiet" '
+152     BEGIN {
+153         OFS = ","
+154     }
+155
+156     function format_date(date) {
+157         split(date, dmy, ".")
+158         return sprintf("%02d/%02d/%04d", dmy[2], dmy[1], dmy[3])       
+159     }
+160
+161     function format_time(time) {
+162         split(time, hmin, ":")
+163         h = hmin[1] + 0
+164         min = hmin[2]
+165         ap = (h >= 12) ? "PM" : "AM"
+166         if (h == 0) h = 12
+167         else if (h > 12) h -= 12
+168         return sprintf("%02d:%s %s", h, min, ap)
+169     }
+170
+171     {
+172         subj_key = $1 "_" $2
+173         date_key = $3 "_" $7
+174
+175         if ($2 == "Лб") {
+176             if (!(date_key in lab_seen)) {
+177                 count[subj_key]++
+178                 lab_seen[date_key] = count[subj_key]
+179             }
+180             number = lab_seen[date_key]
+181         } else {
+182             count[subj_key]++
+183             number = count[subj_key]
+184         }
+185
+186         # Виправлено: видалено зайвий тип заняття з назви
+187         subject_full = $1 "; №" number
+188         start_date = format_date($3)
+189         start_time = format_time($4)
+190         end_date = format_date($5)
+191         end_time = format_time($6)
+192         desc = $7
+193
+194         csv_line = sprintf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"",
+
+195                           subject_full, start_date, start_time, end_date, end_time, desc)
+196
+197         print csv_line >> "'$RESULT'"
+198
+199         if (quiet != 1) {
+200             print csv_line
+201         }
+202     }' "$temp_sorted"
+203
+204     rm -f "$temp_sorted" "$temp_data"
+205 }
+206
+207 case "$1" in
+208     --help) show_help ;;
+209     --version) show_version ;;
+210     -q|--quiet)
+211         quiet=1
+212         shift
+213         ;;
+214 esac
+215
+216 group="$1"
+217 timetable="$2"
+218
+219 if [[ -z "$timetable" || -z "$group" ]]; then
+220     if [[ -z "$timetable" ]]; then
+221         select_timetable
+222     fi
+223     if [[ ! -f "$timetable" ]]; then
+224         echo "Помилка: файл $timetable не існує" >&2
+225         exit 1
+226     fi
+227     date_part=$(echo "$timetable" | grep -oP '\d{2}_\d{2}_\d{4}')      
+228     [[ -z "$date_part" ]] && date_part="unknown"
+229     RESULT="Google_TimeTable_${date_part}.csv"
+230
+231     format_file
+232     select_group
+233 else
+234     if [[ ! -f "$timetable" ]]; then
+235         echo "Помилка: файл $timetable не існує" >&2
+236         exit 1
+237     fi
+238
+239     date_part=$(echo "$timetable" | grep -oP '\d{2}_\d{2}_\d{4}')      
+240     [[ -z "$date_part" ]] && date_part="unknown"
+241     RESULT="Google_TimeTable_${date_part}.csv"
+242
+243     format_file
+244
+245     if ! check_existence_of_group; then
+246         echo "Групу '$group' не знайдено у файлі. Оберіть іншу:"       
+247         select_group
+248     fi
+249 fi
+250
+251 convert_csv_for_import_in_Google_Calendar
+252
+253 rm -f "$TEMP_GROUPS"
