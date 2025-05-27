@@ -1,0 +1,252 @@
+#!/bin/bash
+SCRIPT_VERSION="1.0"
+ENCODING_SRC="cp1251"
+ENCODING_DST="UTF-8"
+TEMP_GROUPS="groups.csv"
+quiet=0
+
+show_help() {
+    echo "Використання: ${0##*/} [--help | --version] | [[-q|--quiet] [академ_група] файл_розкладу.csv]"
+    echo "Перетворює розклад із CIST у формат Google Calendar."
+    exit 0
+}
+
+show_version() {
+    echo "${0##*/} версія $SCRIPT_VERSION"
+    exit 0
+}
+
+select_timetable() {
+    echo "Оберіть файл розкладу:"
+    mapfile -t csv_files < <(ls TimeTable_??_??_20??.csv 2>/dev/null | sort -t'_' -k4,4n -k3,3n -k2,2)
+    if [[ ${#csv_files[@]} -eq 0 ]]; then
+        echo "CSV файли не знайдено." >&2
+        exit 1
+    fi
+    select var in "${csv_files[@]}"; do
+        if [[ -n "$var" ]]; then
+            timetable="$var"
+            break
+        fi
+    done
+}
+
+extract_groups() {
+    mapfile -t available_groups < <(iconv -f "$ENCODING_SRC" -t "$ENCODING_DST" "$timetable" | grep -o 'ПЗПІ-[0-9]\+-[0-9]\+' | sort -u)
+    if [[ ${#available_groups[@]} -eq 0 ]]; then
+        echo "У файлі не знайдено жодної групи." >&2
+        return 1
+    fi
+    printf '%s\n' "${available_groups[@]}" > "$TEMP_GROUPS"
+    return 0
+}
+
+check_existence_of_group() {
+    extract_groups || return 0
+    if grep -q "^$group$" "$TEMP_GROUPS"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+select_group() {
+    extract_groups || return 1
+    mapfile -t groups_array < "$TEMP_GROUPS"
+    if [[ ${#groups_array[@]} -eq 1 ]]; then
+        group="${groups_array[0]}"
+        echo "Автоматично обрана група: $group"
+    else
+        echo "Оберіть академічну групу:"
+        select var in "${groups_array[@]}"; do
+            if [[ -n "$var" ]]; then
+                group="$var"
+                break
+            fi
+        done
+    fi
+}
+
+format_file() {
+    if ! iconv -f "$ENCODING_SRC" -t "$ENCODING_DST" "$timetable" > "$RESULT"; then
+        echo "Помилка під час обробки файлу." >&2
+        exit 1
+    fi
+    sed -i 's/\r/\n/g' "$RESULT"
+}
+
+convert_csv_for_import_in_Google_Calendar() {
+    local temp_sorted=$(mktemp)
+    local temp_data=$(mktemp)
+    
+    awk -v GROUP="$group" '
+    BEGIN {
+        FS=","; OFS="\t"
+    }
+    NR == 1 { next }
+
+    function format_sort_key(date, time) {
+        split(date, dmy, ".")
+        split(time, hm, ":")
+        return sprintf("%04d%02d%02d%02d%02d", dmy[3], dmy[2], dmy[1], hm[1], hm[2])
+    }
+
+    function trim_quotes(s) {
+        gsub(/^"|"$/, "", s)
+        return s
+    }
+
+    {
+        line = $0
+        match(line, /"[0-3][0-9]\.[0-1][0-9]\.[0-9]{4}"/)
+        if (RSTART == 0) next
+        
+        field1 = substr(line, 1, RSTART - 2)
+        rest = substr(line, RSTART)
+
+        n = 0; in_quotes = 0; field = ""
+        for (i = 1; i <= length(rest); i++) {
+            c = substr(rest, i, 1)
+            if (c == "\"") in_quotes = !in_quotes
+            else if (c == "," && !in_quotes) {
+                fields[++n] = field
+                field = ""
+            } else {
+                field = field c
+            }
+        }
+        fields[++n] = field
+        
+        for (i = 1; i <= n; i++) fields[i] = trim_quotes(fields[i])
+        if (n < 12) next
+
+        # Знаходимо групу
+        match(field1, /(ПЗПІ-[0-9]+-[0-9]+)/, m)
+        found_group = m[1]
+
+        if (found_group != GROUP) next
+
+        field1 = substr(field1, RSTART + RLENGTH)
+        gsub(/^[[:space:]]+/, "", field1)
+        subject = field1
+        gsub(/^"|"$/, "", subject)
+        gsub(/^- /, "", subject)
+
+        desc = fields[11]
+        type = "Інше"
+
+        if (desc ~ /Лб/) type = "Лб"
+        else if (desc ~ /Лк/) type = "Лк"
+        else if (desc ~ /Пз/) type = "Пз"
+        else if (desc ~ /Екз/i) type = "Екз"
+
+        sort_key = format_sort_key(fields[1], fields[2])
+        print subject, type, fields[1], fields[2], fields[3], fields[4], desc, sort_key
+    }' "$RESULT" > "$temp_data"
+
+    sort -t $'\t' -k8,8 "$temp_data" > "$temp_sorted"
+
+    echo "Subject,Start Date,Start Time,End Date,End Time,Description" > "$RESULT"
+
+    awk -F'\t' -v quiet="$quiet" '
+    BEGIN {
+        OFS = ","
+    }
+
+    function format_date(date) {
+        split(date, dmy, ".")
+        return sprintf("%02d/%02d/%04d", dmy[2], dmy[1], dmy[3])
+    }
+
+    function format_time(time) {
+        split(time, hmin, ":")
+        h = hmin[1] + 0
+        min = hmin[2]
+        ap = (h >= 12) ? "PM" : "AM"
+        if (h == 0) h = 12
+        else if (h > 12) h -= 12
+        return sprintf("%02d:%s %s", h, min, ap)
+    }
+
+    {
+        subj_key = $1 "_" $2
+        date_key = $3 "_" $7
+
+        if ($2 == "Лб") {
+            if (!(date_key in lab_seen)) {
+                count[subj_key]++
+                lab_seen[date_key] = count[subj_key]
+            }
+            number = lab_seen[date_key]
+        } else {
+            count[subj_key]++
+            number = count[subj_key]
+        }
+
+        subject_full = $1 "; №" number
+        start_date = format_date($3)
+        start_time = format_time($4)
+        end_date = format_date($5)
+        end_time = format_time($6)
+        desc = $7
+
+        csv_line = sprintf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", 
+                          subject_full, start_date, start_time, end_date, end_time, desc)
+        
+        print csv_line >> "'$RESULT'"
+        
+        if (quiet != 1) {
+            print csv_line
+        }
+    }' "$temp_sorted"
+
+    rm -f "$temp_sorted" "$temp_data"
+}
+
+case "$1" in
+    --help) show_help ;;
+    --version) show_version ;;
+    -q|--quiet)
+        quiet=1
+        shift
+        ;;
+esac
+
+group="$1"
+timetable="$2"
+
+if [[ -z "$timetable" || -z "$group" ]]; then
+    if [[ -z "$timetable" ]]; then
+        select_timetable
+    fi
+    if [[ ! -f "$timetable" ]]; then
+        echo "Помилка: файл $timetable не існує" >&2
+        exit 1
+    fi
+    date_part=$(echo "$timetable" | grep -oP '\d{2}_\d{2}_\d{4}')
+    [[ -z "$date_part" ]] && date_part="unknown"
+    RESULT="Google_TimeTable_${date_part}.csv"
+    
+    format_file
+    select_group
+else
+    if [[ ! -f "$timetable" ]]; then
+        echo "Помилка: файл $timetable не існує" >&2
+        exit 1
+    fi
+    
+    date_part=$(echo "$timetable" | grep -oP '\d{2}_\d{2}_\d{4}')
+    [[ -z "$date_part" ]] && date_part="unknown"
+    RESULT="Google_TimeTable_${date_part}.csv"
+    
+    format_file
+    
+    if ! check_existence_of_group; then
+        echo "Групу '$group' не знайдено у файлі. Оберіть іншу:"
+        select_group
+    fi
+fi
+
+convert_csv_for_import_in_Google_Calendar
+
+rm -f "$TEMP_GROUPS"
