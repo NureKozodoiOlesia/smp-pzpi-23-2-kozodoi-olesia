@@ -1,0 +1,190 @@
+/* Загальні стилі */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f7f9fc;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+header, footer {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    border-radius: 8px;
+}
+
+h1 {
+    text-align: center;
+    color: #007BFF;
+    margin-bottom: 30px;
+}
+
+/* Стилі для таблиць товарів */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table td {
+    padding: 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #eee;
+}
+
+table td img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+/* Стилі для таблиці кошика */
+table[border="1"] {
+    border: 1px solid #ddd;
+    margin: 20px auto;
+}
+
+table[border="1"] th {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border: 1px solid #ddd;
+    font-weight: bold;
+    color: #495057;
+}
+
+table[border="1"] td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+/* Стилі для форм */
+input[type="number"] {
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+}
+
+button {
+    padding: 10px 25px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 5px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Кнопка відправки форми товарів */
+form > button[type="submit"] {
+    display: block;
+    margin: 30px auto 0;
+}
+
+/* Кнопки в кошику */
+.cart-actions {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.cart-actions form {
+    display: inline;
+    margin: 0 10px;
+}
+
+/* Кнопка видалення в таблиці */
+table button {
+    padding: 5px 8px;
+    font-size: 14px;
+    margin: 0;
+}
+
+footer {
+    margin-top: 40px;
+}
+
+footer nav a {
+    font-size: 14px;
+}
+
+/* Стилі для тексту */
+p {
+    text-align: center;
+}
+
+p a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+p a:hover {
+    text-decoration: underline;
+}
+
+/* Повідомлення про помилки */
+.error {
+    color: red;
+    text-align: center;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+/* Стилі для успішних повідомлень */
+.success {
+    color: green;
+    text-align: center;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+/* Адаптивність для мобільних пристроїв */
+@media (max-width: 600px) {
+    main {
+        margin: 20px;
+        padding: 15px;
+    }
+    
+    table {
+        font-size: 14px;
+    }
+    
+    input[type="number"] {
+        width: 50px;
+    }
+    
+    nav a {
+        margin: 0 8px;
+        font-size: 14px;
+    }
+}
