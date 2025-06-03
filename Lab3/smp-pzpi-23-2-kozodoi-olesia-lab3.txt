@@ -89,7 +89,7 @@
 Програмний код
 Б.1 Файл cart.php
 
-GitHub репозиторій: https://github.
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab3/smp-pzpi-23-2-kozodoi-olesia-lab3/smp-pzpi-23-2-kozodoi-olesia-lab3-code/cart.php 
 
   1 <?php
   2 include 'functions.php';
@@ -169,7 +169,7 @@ GitHub репозиторій: https://github.
 
 Б.2 Файл db.php
 
-GitHub репозиторій: https://github.
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab3/smp-pzpi-23-2-kozodoi-olesia-lab3/smp-pzpi-23-2-kozodoi-olesia-lab3-code/db.php 
 
   1 <?php
   2 function getPDO() {
@@ -208,7 +208,7 @@ GitHub репозиторій: https://github.
 
 Б.3 Файл index.php
 
-GitHub репозиторій: https://github.
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab3/smp-pzpi-23-2-kozodoi-olesia-lab3/smp-pzpi-23-2-kozodoi-olesia-lab3-code/index.php 
 
   1 <?php
   2 include 'functions.php';
@@ -259,10 +259,9 @@ GitHub репозиторій: https://github.
  47 </body>
  48 </html>
 
-
 Б.4 Файл products.php
 
-GitHub репозиторій: https://github.
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab3/smp-pzpi-23-2-kozodoi-olesia-lab3/smp-pzpi-23-2-kozodoi-olesia-lab3-code/products.php 
 
   1 <?php
   2 include 'functions.php';
@@ -352,7 +351,7 @@ GitHub репозиторій: https://github.
 
 Б.5 Файл functions.php
 
-GitHub репозиторій: https://github.
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab3/smp-pzpi-23-2-kozodoi-olesia-lab3/smp-pzpi-23-2-kozodoi-olesia-lab3-code/functions.php 
 
   1 <?php
   2 session_start();
@@ -450,14 +449,12 @@ GitHub репозиторій: https://github.
  94             }
  95         }
  96     }
- 97
- 98     return $validItems;
- 99 }
-100 ?>
+ 97     return $validItems;
+ 98 } ?>
 
 Б.6 Файл pay.php
 
-GitHub репозиторій: https://github.
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Lab3/smp-pzpi-23-2-kozodoi-olesia-lab3/smp-pzpi-23-2-kozodoi-olesia-lab3-code/pay.php 
 
   1 <?php
   2 include 'functions.php';
