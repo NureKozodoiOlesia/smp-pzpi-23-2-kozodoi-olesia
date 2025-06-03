@@ -1,59 +1,33 @@
 <?php
 session_start();
 
-function validateCartData($postData, $productList) {
-    $validItems = [];
-
-    foreach ($productList as $key => $product) {
-        if (isset($postData[$key]) && is_numeric($postData[$key])) {
-            $quantity = (int)$postData[$key];
-            if ($quantity >= 0) { // Змінено: тепер дозволяємо 0
-                $validItems[$key] = $quantity;
-            }
-        }
-    }
-
-    return $validItems;
-}
-
 function add_to_cart($newItems) {
-    // Отримуємо існуючий кошик або створюємо новий
     $existingCart = $_SESSION['cart'] ?? [];
     
-    // Додаємо нові товари до існуючого кошика
     foreach ($newItems as $productId => $quantity) {
         if (isset($existingCart[$productId])) {
-            // Якщо товар вже є в кошику, збільшуємо кількість
             $existingCart[$productId] += $quantity;
         } else {
-            // Якщо товару немає, додаємо його
             $existingCart[$productId] = $quantity;
         }
     }
     
-    // Зберігаємо оновлений кошик
     $_SESSION['cart'] = $existingCart;
 }
 
-// Нова функція для оновлення кількості товарів в кошику
 function update_cart($items) {
-    // Отримуємо існуючий кошик або створюємо новий
     $cart = $_SESSION['cart'] ?? [];
     
-    // Оновлюємо кількість товарів
     foreach ($items as $productId => $quantity) {
         if ($quantity == 0) {
-            // Якщо кількість 0, видаляємо товар з кошика
             if (isset($cart[$productId])) {
                 unset($cart[$productId]);
             }
         } else {
-            // Інакше встановлюємо нову кількість
             $cart[$productId] = $quantity;
         }
     }
     
-    // Зберігаємо оновлений кошик
     $_SESSION['cart'] = $cart;
 }
 
@@ -107,5 +81,20 @@ function render_cart_table($cart, $products) {
     $html .= '</table>';
 
     return $html;
+}
+
+function validateCartData($postData, $productList) {
+    $validItems = [];
+
+    foreach ($productList as $key => $product) {
+        if (isset($postData[$key]) && is_numeric($postData[$key])) {
+            $quantity = (int)$postData[$key];
+            if ($quantity >= 0) {
+                $validItems[$key] = $quantity;
+            }
+        }
+    }
+
+    return $validItems;
 }
 ?>
