@@ -2,7 +2,6 @@
 include 'functions.php';
 require_once 'db.php';
 
-// Отримуємо продукти з бази даних
 $pdo = getPDO();
 $stmt = $pdo->query('SELECT * FROM products');
 $products = [];
@@ -13,19 +12,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     ];
 }
 
-$error = false;
-
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $validItems = validateCartData($_POST, $products);
-
-    if (!empty($validItems)) {
-        add_to_cart($validItems);
-        header('Location: cart.php');
-        exit;
-    } else {
-        $error = "Перевірте будь ласка введені дані";
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -36,7 +22,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Шапка -->
     <header>
         <nav>
             <a href="index.php">Home</a> |
@@ -45,13 +30,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </nav>
     </header>
 
-    <!-- Тіло -->
     <main>
         <h1>Ласкаво просимо до веб-магазину "Весна"</h1>
         <p><a href="products.php">Перейти до покупок</a></p>
     </main>
 
-    <!-- Підвал -->
     <footer>
         <hr>
         <nav>
