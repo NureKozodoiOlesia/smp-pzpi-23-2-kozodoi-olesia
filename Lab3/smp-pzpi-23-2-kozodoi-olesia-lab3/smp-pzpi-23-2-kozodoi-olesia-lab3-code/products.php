@@ -2,7 +2,6 @@
 include 'functions.php';
 require_once 'db.php';
 
-// Отримуємо продукти з бази даних
 $pdo = getPDO();
 $stmt = $pdo->query('SELECT * FROM products');
 $products = [];
@@ -19,7 +18,6 @@ $cart = get_cart();
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $validItems = validateCartData($_POST, $products);
     if (!empty($validItems) && array_sum($validItems) > 0) {
-        // Використовуємо update_cart замість add_to_cart для оновлення кількості
         update_cart($validItems);
         header('Location: cart.php');
         exit;
@@ -56,10 +54,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <table>
                 <?php foreach ($products as $id => $product): ?>
                     <tr>
-                        <td><img src="https://via.placeholder.com/50" alt="<?= htmlspecialchars($product['name']) ?>"></td>
+                        <td><img src="https://via.placeholder.com/50"></td>
                         <td><strong><?= htmlspecialchars($product['name']) ?></strong></td>
                         <td>
-                            <!-- Змінено: тепер показуємо поточну кількість з кошика -->
                             <input type="number" name="<?= $id ?>" value="<?= isset($cart[$id]) ? $cart[$id] : 0 ?>" min="0">
                             <?php if (isset($cart[$id])): ?>
                                 <br><small style="color: #28a745;">В кошику: <?= $cart[$id] ?></small>
@@ -70,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <?php endforeach; ?>
             </table>
             <br>
-            <button type="submit">Оновити кошик</button>
+            <button type="submit">Додати до кошика</button>
         </form>
     </main>
 
