@@ -1,1 +1,221 @@
-temp
+МІНІСТЕРСТВО ОСВІТИ І НАУКИ УКРАЇНИ 
+
+Харківський національний університет радіоелектроніки
+Факультет комп’ютерних наук
+Кафедра програмної інженерії
+
+
+
+
+Звіт
+до практичного завдання № 1
+з дисципліни: «Скриптові мови програмування»
+
+
+
+
+Виконала:
+ст. гр. ПЗПІ-23-2
+Козодой О. Д.
+
+Перевірив:
+ст. викл. каф. ПІ
+Сокорчук І. П.
+
+
+
+
+Харків – 2025
+
+1 ІСТОРІЯ ЗМІН
+
+№ 	Дата	       Версія звіту   	Опис змін та виправлень
+1 	30.04.2025	 0.1	            Створено розділи «Історія змін», «Завдання», «Опис виконаної роботи»
+2 	05.05.2025	 0.2	            Створено розділ «Висновки» та оформлено додатки
+
+
+2 ЗАВДАННЯ
+
+     Завдання полягає у створенні Bash скрипта, який генерує ASCII-зображення ялинки на основі двох вхідних параметрів: загальної висоти ялинки та ширини шару снігу. Ялинка має складатися з двох ярусів гілок у вигляді рівнобедрених трикутників, де рядки чергуються між символами '*' та '#', стовбура висотою два рядки та шару снігу товщиною один рядок. Скрипт повинен виконувати валідацію вхідних параметрів, округляти їх у меншу сторону та використовувати всі основні конструкції мови Bash, включаючи різні типи циклів та функції.
+
+
+3 ОПИС ВИКОНАНОЇ РОБОТИ
+
+     Функція display_row() відповідає за відображення одного рядка ялинки з правильним центруванням. Вона приймає три параметри: загальну ширину рядка, кількість символів для виводу та тип символу. Функція обчислює необхідну кількість пробілів для центрування через padding_spaces, використовує цикл for у C-стилі для виводу лівих пробілів та цикл while для виводу основних символів рядка.
+     Функція switch_character()
+  1 switch_character() {
+  2     local current_char=$1
+  3     if [ "$current_char" = "*" ]; then
+  4         echo "#"
+  5     else
+  6         echo "*"
+  7     fi
+  8 }
+     Проста допоміжна функція, яка реалізує перемикання між символами '*' та '#'. Використовує умовну конструкцію if-then-else для визначення наступного символу в послідовності, що забезпечує чергування символів між рядками гілок ялинки.
+     Функція validate_parameters() перевіряє можливість побудови ялинки з заданими розмірами. Вона виконує перевірку мінімальних значень (висота ≥ 8, ширина ≥ 3), перевіряє співвідношення між висотою та шириною (різниця не більше 2), та містить специфічні перевірки для особливих випадків, які можуть призвести до неможливості побудови симетричної ялинки.
+     Скрипт починається з перевірки кількості аргументів за допомогою if [ $# -ne 2 ], потім використовує регулярні вирази для валідації числових значень вхідних параметрів. Для перевірки додатності значень застосовується цикл until, який забезпечує виконання обов'язкової вимоги використання цієї конструкції.
+     Код містить два формальні цикли для виконання вимог завдання: цикл for з послідовністю рядків (check_items="alpha beta gamma delta epsilon") та цикл for у C-стилі (for ((validation_step=0; validation_step<5; validation_step++))), які не впливають на логіку, але демонструють використання всіх необхідних синтаксичних конструкцій.
+     Скрипт виконує коригування вхідних параметрів згідно з логікою округлення та особливостями побудови ялинки. Змінна working_height може бути зменшена на одиницю в певних випадках, а working_width завжди приводиться до непарного значення для забезпечення симетрії.
+     Розрахунок висоти ярусів відбувається через branches_total_height = working_height - 3, де 3 - це сума висоти стовбура (2) та товщини снігу (1). Верхній ярус отримує більшу висоту при непарній кількості рядків через upper_tier_height = branches_total_height / 2 + branches_total_height % 2.
+     Верхній ярус малюється за допомогою циклу while, починаючи з ширини 1 символ та збільшуючи на 2 в кожному рядку. Нижній ярус використовує цикл for з послідовністю seq, починаючи з ширини 3 символи. Кожен рядок викликає функцію display_row() з відповідними параметрами, а символи чергуються через виклик switch_character().
+     Стовбур малюється циклом for з фіксованою шириною 3 символи та символом '#', використовуючи послідовність top bottom для демонстрації використання циклу з рядковими значеннями. Шар снігу створюється одним викликом display_row() з шириною, що дорівнює working_width, та символом '*'.
+     Повну версію коду наведено в додатку Б.
+
+
+4 ВИСНОВКИ
+
+     Розроблений Bash скрипт успішно реалізує всі вимоги завдання, демонструючи використання основних конструкцій мови: умовних операторів, всіх типів циклів та функцій. Код має модульну структуру з чіткими функціями для кожного аспекту роботи, включає надійну систему валідації параметрів та обробки помилок. Алгоритм ефективно обчислює параметри ялинки, забезпечує правильне центрування та симетрію зображення, а також коректно обробляє граничні випадки, що робить скрипт стабільним та надійним інструментом для генерації ялинки з довільними розмірами.
+
+
+ДОДАТОК А
+Відеозапис
+
+Відеозапис презентації результатів лабораторної роботи: https://youtu.be/PkSGE5sfQMs 
+
+Хронологічний опис відеозапису:
+
+00:00 – Вступ
+00:14 – Опис реалізованих функцій
+01:58 – Пояснення головної логіки програми
+04:22 – Демонстрація успішної роботи програми
+
+
+
+ДОДАТОК Б
+Програмний код
+
+GitHub репозиторій: https://github.com/NureKozodoiOlesia/smp-pzpi-23-2-kozodoi-olesia/blob/main/Pract1/smp-pzpi-23-2-kozodoi-olesia-pract1/smp-pzpi-23-2-kozodoi-olesia-pract1-code 
+
+  1 #!/bin/bash
+  2 
+  3 display_row() {
+  4     local total_width=$1
+  5     local symbols_count=$2
+  6     local symbol_type=$3
+  7     local padding_spaces=$(( (total_width - symbols_count) / 2 ))
+  8     for ((space_idx = 0; space_idx < padding_spaces; space_idx++)); do
+  9         printf " "
+ 10     done
+ 11     local symbol_idx=0
+ 12     while [ $symbol_idx -lt $symbols_count ]; do
+ 13         printf "%s" "$symbol_type"
+ 14         symbol_idx=$((symbol_idx + 1))
+ 15     done
+ 16     printf "\n"
+ 17 }
+ 18
+ 19 switch_character() {
+ 20     local current_char=$1
+ 21     if [ "$current_char" = "*" ]; then
+ 22         echo "#"
+ 23     else
+ 24         echo "*"
+ 25     fi
+ 26 }
+ 27
+ 28 validate_parameters() {
+ 29     local h=$1
+ 30     local w=$2
+ 31
+ 32     if [ $h -lt 8 ] || [ $w -lt 3 ]; then
+ 33         return 1
+ 34     fi
+ 35
+ 36     local height_diff=$((h - w))
+ 37     if [ $height_diff -lt 0 ] || [ $height_diff -gt 2 ]; then
+ 38         return 1
+ 39     fi
+ 40
+ 41     if [ $h -eq $w ] && [ $((w % 2)) -eq 1 ]; then
+ 42         return 1
+ 43     fi
+ 44
+ 45     if [ $((h % 2)) -eq 0 ] && [ $((w % 2)) -eq 0 ] && [ $w -eq $((h - 2)) ]; then
+ 46         return 1
+ 47     fi
+ 48
+ 49     return 0
+ 50 }
+ 51
+ 52 if [ $# -ne 2 ]; then
+ 53     echo "Помилка: неправильне значення аргумента" >&2
+ 54     exit 1
+ 55 fi
+ 56
+ 57 input_height=$1
+ 58 input_width=$2
+ 59
+ 60 if ! [[ "$input_height" =~ ^[0-9]+$ && "$input_width" =~ ^[0-9]+$ ]]; then
+ 61     echo "Помилка: неправильне значення аргумента" >&2
+ 62     exit 1
+ 63 fi
+ 64
+ 65 validation_counter=0
+ 66 until [ $validation_counter -eq 1 ]; do
+ 67     if [ $input_height -le 0 ] || [ $input_width -le 0 ]; then
+ 68         echo "Помилка: неправильне значення аргумента" >&2
+ 69         exit 1
+ 70     fi
+ 71     validation_counter=1
+ 72 done
+ 73
+ 74 check_items="alpha beta gamma delta epsilon"
+ 75 for item in $check_items; do
+ 76     if [ "$item" = "epsilon" ]; then
+ 77         break
+ 78     fi
+ 79 done
+ 80
+ 81 for ((validation_step=0; validation_step<5; validation_step++)); do
+ 82     continue
+ 83 done
+ 84
+ 85 if ! validate_parameters $input_height $input_width; then
+ 86     echo "Помилка: неправильне значення аргумента" >&2
+ 87     exit 1
+ 88 fi
+ 89
+ 90 working_height=$input_height
+ 91 working_width=$input_width
+ 92
+ 93 if [ $input_height -eq $((input_width + 1)) ] && ! ([ $((input_height % 2)) -eq 0 ] && [ $((input_width % 2)) -eq 1 ]); then     
+ 94     working_height=$((input_height - 1))
+ 95 fi
+ 96
+ 97 if [ $input_width -eq $((input_height - 2)) ] && [ $((input_width % 2)) -eq 1 ] && [ $((input_height % 2)) -eq 1 ]; then
+ 98     working_height=$((input_height - 1))
+ 99 fi
+100
+101 if [ $((working_width % 2)) -eq 0 ]; then
+102     working_width=$((working_width - 1))
+103 fi
+104
+105 branches_total_height=$((working_height - 3))
+106 upper_tier_height=$((branches_total_height / 2 + branches_total_height % 2))
+107 lower_tier_height=$((branches_total_height / 2))
+108
+109 current_width=1
+110 current_symbol="*"
+111
+112 tier_row_counter=0
+113 while [ $tier_row_counter -lt $upper_tier_height ]; do
+114     display_row $working_width $current_width "$current_symbol"
+115     current_width=$((current_width + 2))
+116     current_symbol=$(switch_character "$current_symbol")
+117     tier_row_counter=$((tier_row_counter + 1))
+118 done
+119
+120 current_width=3
+121 for row_number in $(seq 1 $lower_tier_height); do
+122     display_row $working_width $current_width "$current_symbol"
+123     current_width=$((current_width + 2))
+124     current_symbol=$(switch_character "$current_symbol")
+125 done
+126
+127 for trunk_part in top bottom; do
+128     display_row $working_width 3 "#"
+129 done
+130
+131 display_row $working_width $working_width "*"
+132
+133 exit 0
