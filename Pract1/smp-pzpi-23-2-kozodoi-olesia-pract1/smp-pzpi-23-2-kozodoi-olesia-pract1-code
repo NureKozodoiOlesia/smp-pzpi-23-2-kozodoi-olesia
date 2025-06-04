@@ -1,0 +1,137 @@
+#!/bin/bash
+
+display_row() {
+    local total_width=$1
+    local symbols_count=$2
+    local symbol_type=$3
+    
+    local padding_spaces=$(( (total_width - symbols_count) / 2 ))
+    
+    for ((space_idx = 0; space_idx < padding_spaces; space_idx++)); do
+        printf " "
+    done
+    
+    local symbol_idx=0
+    while [ $symbol_idx -lt $symbols_count ]; do
+        printf "%s" "$symbol_type"
+        symbol_idx=$((symbol_idx + 1))
+    done
+    
+    printf "\n"
+}
+
+switch_character() {
+    local current_char=$1
+    if [ "$current_char" = "*" ]; then
+        echo "#"
+    else
+        echo "*"
+    fi
+}
+
+validate_parameters() {
+    local h=$1
+    local w=$2
+    
+    if [ $h -lt 8 ] || [ $w -lt 3 ]; then
+        return 1
+    fi
+    
+    local height_diff=$((h - w))
+    if [ $height_diff -lt 0 ] || [ $height_diff -gt 2 ]; then
+        return 1
+    fi
+    
+    if [ $h -eq $w ] && [ $((w % 2)) -eq 1 ]; then
+        return 1
+    fi
+    
+    if [ $((h % 2)) -eq 0 ] && [ $((w % 2)) -eq 0 ] && [ $w -eq $((h - 2)) ]; then
+        return 1
+    fi
+    
+    return 0
+}
+
+if [ $# -ne 2 ]; then
+    echo "Помилка: неправильне значення аргумента" >&2
+    exit 1
+fi
+
+input_height=$1
+input_width=$2
+
+if ! [[ "$input_height" =~ ^[0-9]+$ && "$input_width" =~ ^[0-9]+$ ]]; then
+    echo "Помилка: неправильне значення аргумента" >&2
+    exit 1
+fi
+
+validation_counter=0
+until [ $validation_counter -eq 1 ]; do
+    if [ $input_height -le 0 ] || [ $input_width -le 0 ]; then
+        echo "Помилка: неправильне значення аргумента" >&2
+        exit 1
+    fi
+    validation_counter=1
+done
+
+check_items="alpha beta gamma delta epsilon"
+for item in $check_items; do
+    if [ "$item" = "epsilon" ]; then
+        break
+    fi
+done
+
+for ((validation_step=0; validation_step<5; validation_step++)); do
+    continue
+done
+
+if ! validate_parameters $input_height $input_width; then
+    echo "Помилка: неправильне значення аргумента" >&2
+    exit 1  
+fi
+
+working_height=$input_height
+working_width=$input_width
+
+if [ $input_height -eq $((input_width + 1)) ] && ! ([ $((input_height % 2)) -eq 0 ] && [ $((input_width % 2)) -eq 1 ]); then
+    working_height=$((input_height - 1))
+fi
+
+if [ $input_width -eq $((input_height - 2)) ] && [ $((input_width % 2)) -eq 1 ] && [ $((input_height % 2)) -eq 1 ]; then
+    working_height=$((input_height - 1))
+fi
+
+if [ $((working_width % 2)) -eq 0 ]; then
+    working_width=$((working_width - 1))
+fi
+
+branches_total_height=$((working_height - 3))  
+upper_tier_height=$((branches_total_height / 2 + branches_total_height % 2))
+lower_tier_height=$((branches_total_height / 2))
+
+current_width=1
+current_symbol="*"
+
+tier_row_counter=0
+while [ $tier_row_counter -lt $upper_tier_height ]; do
+    display_row $working_width $current_width "$current_symbol"
+    current_width=$((current_width + 2))
+    current_symbol=$(switch_character "$current_symbol")
+    tier_row_counter=$((tier_row_counter + 1))
+done
+
+current_width=3
+for row_number in $(seq 1 $lower_tier_height); do
+    display_row $working_width $current_width "$current_symbol"
+    current_width=$((current_width + 2))
+    current_symbol=$(switch_character "$current_symbol")
+done
+
+for trunk_part in top bottom; do
+    display_row $working_width 3 "#"
+done
+
+display_row $working_width $working_width "*"
+
+exit 0
